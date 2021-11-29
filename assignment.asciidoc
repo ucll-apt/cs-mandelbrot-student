@@ -1,0 +1,285 @@
+//
+// This AsciiDoc file is also available in HTML form.
+//
+
+= Mandelbrot Project
+
+For this little project, you will render a http://files.leone.ucll.be/mandelbig.gif[movie] showing the camera zooming in on a particular part of the https://en.wikipedia.org/wiki/Mandelbrot_set[Mandelbrot fractal].
+This will be computationally intensive and relying on parallelism will cut down rendering dramatically.
+We will use C# for this project, as it offers many ways to parallelize code without needless complexity.
+
+We'll write the resulting image as a WIF file, the same file format used in my 3DCG course.
+Those who do not follow the course can find more information http://3dcg.leone.ucll.be/first-steps/setup/explanations.html#_wif_viewer[here].
+We strongly recommend to use the WPF-based viewer.
+
+== Mandelbrot Fractal
+
+Below is a quick explanation of how Mandelbrot fractals are computed.
+It can help you understand what is going on internally.
+But first, look at some pretty picture shown on https://en.wikipedia.org/wiki/Mandelbrot_set[Wikipedia].
+
+Let's build a series of numbers stem:[x_0, x_1, x_2, \dots].
+We start by picking an arbitrary value for stem:[x_0].
+Its successor can be found with the formula
+
+[stem]
+++++
+  x_{i+1} = x_{i}^2 + x_0
+++++
+
+In other words, the next number in the series is the square of the previous one added to the original number.
+Let's see what happens if we take stem:[x_0 = 0.1]:
+
+[stem]
+++++
+\begin{align}
+    x_0 & = 0.1 \\
+    x_1 & = x_0^2 + 0.1 = 0.11 \\
+    x_2 & = x_1^2 + 0.1 = 0.1121 \\
+    x_3 & = x_2^2 + 0.1 = 0.112566 \\
+    x_4 & = 0.112671 \\
+    x_5 & = 0.112695 \\
+    x_6 & = 0.1127 \\
+    x_7 & = 0.112701 \\
+    x_8 & = 0.112702 \\
+    x_9 & = 0.112702 \\
+    x_{10} & = 0.112702 \\
+\end{align}
+++++
+
+As you can see, from stem:[x_8] on, the values seem to stagnate.
+This is known as _converging_.
+Let's now look at a different series, one starting with stem:[0.2]:
+
+[stem]
+++++
+\begin{align}
+    x_{0} & = 0.2 \\
+    x_{1} & = 0.24 \\
+    x_{2} & = 0.2576 \\
+    x_{3} & = 0.266358 \\
+    x_{4} & = 0.270946 \\
+    x_{5} & = 0.273412 \\
+    x_{6} & = 0.274754 \\
+    x_{7} & = 0.27549 \\
+    x_{8} & = 0.275895 \\
+    x_{9} & = 0.276118 \\
+    x_{10} & = 0.276241 \\
+    x_{11} & = 0.276309 \\
+    x_{12} & = 0.276347 \\
+    x_{13} & = 0.276368 \\
+    x_{14} & = 0.276379 \\
+    x_{15} & = 0.276385 \\
+    x_{16} & = 0.276389 \\
+    x_{17} & = 0.276391 \\
+    x_{18} & = 0.276392 \\
+    x_{19} & = 0.276392 \\
+    x_{20} & = 0.276393 \\
+    x_{21} & = 0.276393 \\
+    x_{22} & = 0.276393 \\
+\end{align}
+++++
+
+It takes a little while longer to converge.
+Interesting.
+
+Another one:
+
+[stem]
+++++
+\begin{align}
+    x_{0} & = 0.9 \\
+    x_{1} & = 1.71 \\
+    x_{2} & = 3.8241 \\
+    x_{3} & = 15.5237 \\
+    x_{4} & = 241.887 \\
+    x_{5} & = 58510. \\
+    x_{6} & = 3.42342 \cdot 10^{9} \\
+    x_{7} & = 1.17198 \cdot 10^{19} \\
+    x_{8} & = 1.37354 \cdot 10^{38} \\
+    x_{9} & = 1.8866 \cdot 10^{76} \\
+    x_{10} & = 3.55927 \cdot 10^{152} \\
+    x_{11} & = 1.26684 \cdot 10^{305} \\
+    x_{12} & = 1.60489 \cdot 10^{610} \\
+\end{align}
+++++
+
+Wow, this got out of control fast!
+Instead of converging, this series _diverges_: the stem:[x_i] values start growing larger and larger.
+
+Given an arbitrary initial value stem:[x_0], we want to determine if the corresponding series diverges, and how quickly.
+We proceed as follows:
+
+[source,language="python"]
+----
+def mandelbrot(x0, threshold, max_iterations):
+  x = c
+  iteration = 0
+  while abs(x) < threshold and iteration < max_iterations:
+    x = x**2 + c
+    iteration += 1
+  return iteration
+----
+
+This function basically computes the "divergence speed" of the series starting with `x0`.
+In our case, this stem:[C(x)] will range from stem:[0] to stem:[255].
+We can assign a color with each of these values: stem:[0] can be black, stem:[255] can be white, and values in between are shades of gray.
+
+But how do get those fancy images from this?
+Right now, we can give each number a color, but this is one dimensional, and images are two dimensional.
+Simple: instead of working with real numbers, we work with complex numbers.
+To determine the color of pixel (x, y), we take stem:[x_0 = x + y \,i] and apply the math.
+
+== Implementation
+
+=== `Mandelbrot` Class
+
+The `Mandelbrot` class is easy to use:
+
+[source,language='csharp']
+----
+// Create object
+var mandelbrot = new Mandelbrot(horizontalResolution,
+                                verticalResolution,
+                                rectangle);
+
+// Compute the value for a specific pixel
+mandelbrot.ComputeSingle(0, 0);
+
+// Compute all pixels on a row 0
+mandelbrot.ComputeRow(0);
+
+// Compute all values
+mandelbrot.ComputeAll();
+
+// Get value at (x, y)
+var i = mandelbrot[x, y]
+----
+
+A `Mandelbrot` object with `horizontalResolution` and `verticalResolution` will create a matrix with these dimensions internally.
+Every element in this matrix corresponds to a pixel in the final image.
+Initially, each element of this matrix still has to be computed.
+This is achieved using
+
+* `ComputeSingle(x, y)` for a single element
+* `ComputeRow(y)` deals with an entire row at once
+* `ComputeAll` processes all elements with a single method call.
+
+=== Planner
+
+The goal is to render a little video.
+This means that we will need to create multiple `Mandelbrot` objects (one per frame) and compute each element of it.
+For example, say we want 5 seconds at 30fps with resolution 1920&times;1080, then we need to compute stem:[5 \times 30 \times 1920 \times 1080 = 311,040,000] individual pixels.
+That's a lot of pixels.
+
+We want to subdivide all this work in smaller jobs.
+Each job represents a "single unit of work" to which a thread will be assigned (see later.)
+
+There are multiple ways to divide this into jobs.
+We could have one job correspond to
+
+* computing a single pixel of one frame;
+* computing one row of one frame;
+* computing one full frame;
+* computing all frames (i.e., one big job.)
+
+To subdivide a big task into small jobs, we use a _planner_.
+A planner conforms to the following interface
+
+[source,language='c#']
+----
+public interface IPlanner
+{
+    public int JobCount { get; }
+
+    public Action Job( int index );
+}
+----
+
+A planner receives a list of `Mandelbrot` objects in its constructor and "converts" them in jobs.
+Running every job is equivalent with rendering all images:
+
+[source,language="c#"]
+----
+// Create planner
+var planner = new PixelPlanner(mandelbrots);
+
+for ( var i = 0; i != planner.JobCount; ++i )
+{
+    // Fetch job
+    var job = planner.Job(i);
+
+    // Perform job
+    job();
+}
+----
+
+We distinguish four different planners, each represented by a separate class implementing `IPlanner`:
+
+* `PixelPlanner` creates one job per pixel.
+  In the example above, this planner would define 311,040,000 jobs.
+* `RowPlanner` creates one job per row.
+  In the example above, this planner would define stem:[5 \times 30 \times 1080 = 162,000] jobs.
+* `FramePlanner` creates one job per image.
+  In the example above, this planner would define stem:[5 \times 30 = 150] jobs.
+* `MonolithPlanner` creates a single job for the entire rendering process.
+  In the example above, this planner would define one job.
+
+=== Scheduler
+
+A _scheduler_ is an object that receives an `IPlanner` and executes all jobs.
+We will implement multiple schedulers, each using a different approach.
+For example, the `SingleThreadScheduler` will run all jobs on a single thread, while `ThreadproolScheduler` will make use of a thread pool.
+
+Each scheduler implements the following interface:
+
+[source,language='c#']
+----
+public interface IScheduler
+{
+    // Performs all the jobs from the given planner
+    void Schedule( IPlanner planner );
+}
+----
+
+== Your Mission
+
+Start by taking a look at `Program.cs`.
+You will find a list of parameters (`PATH`, `SCHEDULER`, ...)
+You will have to modify their values.
+Make sure to use the correct exporter: use `AsBinaryWif` for the WPF-based viewer and `AsTextWif` for the Python viewer.
+
+Below is a list of tasks.
+While you can perform them in the same order they're listed in, this would be counterproductive.
+When writing code, always choose the path that yields observable, verifyable results the fastest.
+You don't want to write code and only check that everything works at the end.
+
+[NOTE,caption='Task']
+====
+* Write the `IPlanner` classes
+** `RowPlanner`
+** `FramePlanner`
+** `MonolithPlanner`
+
+You can use the given implementation for `PixelPlanner` as guide.
+====
+
+[NOTE,caption='Task']
+====
+* Write the `IScheduler` classes
+** `SingleThreadScheduler`
+** `ManualThreadingScheduler`
+** `ThreadPoolScheduler`
+** `ParallelScheduler`
+** `TaskScheduler`
+====
+
+[NOTE,caption='Task']
+====
+Make the following time measurements:
+
+* Using the `RowPlanner` combined with every scheduler (= 5 measurements.)
+* Using a parallelized scheduler (i.e., not `SingleThreadedScheduler``) combined with each pallner (= 3 measurements.)
+
+Write these measurements down in a text file named `measurements.txt`.
+====
