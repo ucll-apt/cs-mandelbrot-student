@@ -12,6 +12,17 @@ We'll write the resulting image as a WIF file, the same file format used in my 3
 Those who do not follow the course can find more information http://3dcg.leone.ucll.be/first-steps/setup/explanations.html#_wif_viewer[here].
 We strongly recommend to use the WPF-based viewer.
 
+== Initial Setup
+
+Since GitHub Classroom doesn't seem to like starter code, you'll have to download it manually.
+
+[source,language='bash']
+----
+$ git remote add upstream https://github.com/ucll-apt/cs-mandelbrot-student.git
+
+$ git pull upstream master
+----
+
 == Mandelbrot Fractal
 
 Below is a quick explanation of how Mandelbrot fractals are computed.
