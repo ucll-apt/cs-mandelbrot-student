@@ -18,6 +18,8 @@ Since GitHub Classroom doesn't seem to like starter code, you'll have to downloa
 
 [source,language='bash']
 ----
+$ git clone YOUR-FORKS-URL
+
 $ git remote add upstream https://github.com/ucll-apt/cs-mandelbrot-student.git
 
 $ git pull upstream master
