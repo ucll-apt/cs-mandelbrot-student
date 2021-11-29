@@ -296,3 +296,8 @@ Make the following time measurements:
 
 Write these measurements down in a text file named `measurements.txt`.
 ====
+
+=== Submission
+
+Complete the included file `report.json` and submit it on Toledo.
+Sending the wrong file will inexorably lead your submission to be ignored.
