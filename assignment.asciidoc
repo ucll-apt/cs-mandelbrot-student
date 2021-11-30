@@ -274,7 +274,7 @@ You don't want to write code and only check that everything works at the end.
 ** `FramePlanner`
 ** `MonolithPlanner`
 
-You can use the given implementation for `PixelPlanner` as guide.
+You can use the given implementation of `PixelPlanner` as guide.
 ====
 
 [NOTE,caption='Task']
