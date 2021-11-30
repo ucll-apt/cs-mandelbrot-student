@@ -292,7 +292,7 @@ You can use the given implementation of `PixelPlanner` as guide.
 Make the following time measurements:
 
 * Using the `RowPlanner` combined with every scheduler (= 5 measurements.)
-* Using a parallelized scheduler (i.e., not `SingleThreadedScheduler``) combined with each pallner (= 3 measurements.)
+* Using a parallelized scheduler (i.e., not `SingleThreadedScheduler``) combined with each planner (= 4 measurements.)
 
 Write these measurements down in a text file named `measurements.txt`.
 ====
@@ -301,3 +301,5 @@ Write these measurements down in a text file named `measurements.txt`.
 
 Complete the included file `report.json` and submit it on Toledo.
 Sending the wrong file will inexorably lead your submission to be ignored.
+
+You should obviously also push all your code to GitHub.
