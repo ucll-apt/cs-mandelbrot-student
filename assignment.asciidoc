@@ -176,7 +176,7 @@ This is achieved using
 
 * `ComputeSingle(x, y)` for a single element
 * `ComputeRow(y)` deals with an entire row at once
-* `ComputeAll` processes all elements with a single method call.
+* `ComputeAll()` processes all elements with a single method call.
 
 === Planner
 
