@@ -300,6 +300,6 @@ Write these measurements down in a text file named `measurements.txt`.
 === Submission
 
 Complete the included file `report.json` and submit it on Toledo.
-Sending the wrong file will inexorably lead your submission to be ignored.
+Sending the wrong file will inexorably lead to your submission being ignored.
 
 You should obviously also push all your code to GitHub.
