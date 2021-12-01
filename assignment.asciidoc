@@ -338,7 +338,7 @@ You can use the given implementation of `PixelPlanner` as guide.
 Make the following time measurements:
 
 * Using the `RowPlanner` combined with every scheduler (= 5 measurements.)
-* Using a parallelized scheduler (i.e., not `SingleThreadedScheduler``) combined with each planner (= 4 measurements.)
+* Using a parallelized scheduler (i.e., not `SingleThreadedScheduler`) combined with each planner (= 4 measurements.)
 
 Write these measurements down in a text file named `measurements.txt`.
 ====
