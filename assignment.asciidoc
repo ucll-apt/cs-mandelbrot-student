@@ -4,6 +4,12 @@
 
 = Mandelbrot Project
 
+[NOTE]
+====
+This project is very similar to its Go counterpart.
+Those who made the Go version might want to jump straight to the <<#implementation,section about implementation>>.
+====
+
 For this little project, you will render a http://files.leone.ucll.be/mandelbig.gif[movie] showing the camera zooming in on a particular part of the https://en.wikipedia.org/wiki/Mandelbrot_set[Mandelbrot fractal].
 This will be computationally intensive and relying on parallelism will cut down rendering dramatically.
 We will use C# for this project, as it offers many ways to parallelize code without needless complexity.
@@ -12,20 +18,14 @@ We'll write the resulting image as a WIF file, the same file format used in my 3
 Those who do not follow the course can find more information http://3dcg.leone.ucll.be/first-steps/setup/explanations.html#_wif_viewer[here].
 We strongly recommend to use the WPF-based viewer.
 
-== Initial Setup
+== Background Information
 
-Since GitHub Classroom doesn't seem to like starter code, you'll have to download it manually.
+[NOTE]
+====
+This section is identical to the Go version.
+====
 
-[source,language='bash']
-----
-$ git clone YOUR-FORKS-URL
-
-$ git remote add upstream https://github.com/ucll-apt/cs-mandelbrot-student.git
-
-$ git pull upstream master
-----
-
-== Mandelbrot Fractal
+=== Mandelbrot Fractal
 
 Below is a quick explanation of how Mandelbrot fractals are computed.
 It can help you understand what is going on internally.
@@ -143,6 +143,102 @@ Right now, we can give each number a color, but this is one dimensional, and ima
 Simple: instead of working with real numbers, we work with complex numbers.
 To determine the color of pixel (x, y), we take stem:[x_0 = x + y \,i] and apply the math.
 
+=== Planner
+
+The goal is to render a little video.
+This means that we will need to create multiple `Mandelbrot` objects (one per frame) and compute each element of it.
+For example, say we want 5 seconds at 30fps with resolution 1920&times;1080, then we need to compute stem:[5 \times 30 \times 1920 \times 1080 = 311,040,000] individual pixels.
+That's a lot of pixels.
+
+We want to subdivide all this work in smaller jobs.
+Each job represents a "single unit of work" to which a thread will be assigned (see later.)
+
+There are multiple ways to divide this into jobs.
+We could have one job correspond to
+
+* computing a single pixel of one frame;
+* computing one row of one frame;
+* computing one full frame;
+
+To subdivide a big task into small jobs, we use a _planner_.
+In Python, a planner class could look somewhat like this:
+
+[source,language='python']
+----
+class ExamplePlanner:
+  def __init__(self, mandelbrots):
+    self.__mandelbrots = mandelbrots
+
+  @property
+  def job_count(self):
+    """
+    Total number of jobs.
+    """
+    return ...
+
+  def job(self, n):
+    """
+    Get n-th job.
+    """
+    return ...
+
+
+# Create planner
+planner = ExamplePlanner(mandelbrots)
+
+# Running all jobs amounts to computing all mandelbrots
+for i in range(planner.job_count):
+  job = planner.job(i)
+  job()
+----
+
+We distinguish four different planners, each represented by a separate type implementing the `Planner` interface:
+
+* `PixelPlanner` creates one job per pixel.
+  In the example above, this planner would define stem:[5 \times 30 \times 1920 \times 1080 = 311,040,000] jobs.
+* `RowPlanner` creates one job per row.
+  In the example above, this planner would define stem:[5 \times 30 \times 1080 = 162,000] jobs.
+* `FramePlanner` creates one job per image.
+  In the example above, this planner would define stem:[5 \times 30 = 150] jobs.
+* `MonolithPlanner` creates a single job for the entire rendering process.
+  In the example above, this planner would define one job.
+
+=== Scheduler
+
+A _scheduler_ is an object that receives a `Planner` and executes all jobs.
+This can be achieved in many different ways:
+
+* All jobs are executed on a single thread.
+* Each job is given to a separate thread.
+* A fixed amount of threads is created and the jobs are distributed among them.
+* Etc.
+
+Each approach will be implemented as scheduler.
+
+[source,language='python']
+----
+class ExampleScheduler:
+  def schedule(self, planner):
+    """
+    Runs all jobs.
+    """
+    ...
+----
+
+== Initial Setup
+
+Since GitHub Classroom doesn't seem to like starter code, you'll have to download it manually.
+
+[source,language='bash']
+----
+$ git clone YOUR-FORKS-URL
+
+$ git remote add upstream https://github.com/ucll-apt/cs-mandelbrot-student.git
+
+$ git pull upstream master
+----
+
+[#implementation]
 == Implementation
 
 === `Mandelbrot` Class
@@ -180,23 +276,6 @@ This is achieved using
 
 === Planner
 
-The goal is to render a little video.
-This means that we will need to create multiple `Mandelbrot` objects (one per frame) and compute each element of it.
-For example, say we want 5 seconds at 30fps with resolution 1920&times;1080, then we need to compute stem:[5 \times 30 \times 1920 \times 1080 = 311,040,000] individual pixels.
-That's a lot of pixels.
-
-We want to subdivide all this work in smaller jobs.
-Each job represents a "single unit of work" to which a thread will be assigned (see later.)
-
-There are multiple ways to divide this into jobs.
-We could have one job correspond to
-
-* computing a single pixel of one frame;
-* computing one row of one frame;
-* computing one full frame;
-* computing all frames (i.e., one big job.)
-
-To subdivide a big task into small jobs, we use a _planner_.
 A planner conforms to the following interface
 
 [source,language='c#']
@@ -209,40 +288,7 @@ public interface IPlanner
 }
 ----
 
-A planner receives a list of `Mandelbrot` objects in its constructor and "converts" them in jobs.
-Running every job is equivalent with rendering all images:
-
-[source,language="c#"]
-----
-// Create planner
-var planner = new PixelPlanner(mandelbrots);
-
-for ( var i = 0; i != planner.JobCount; ++i )
-{
-    // Fetch job
-    var job = planner.Job(i);
-
-    // Perform job
-    job();
-}
-----
-
-We distinguish four different planners, each represented by a separate class implementing `IPlanner`:
-
-* `PixelPlanner` creates one job per pixel.
-  In the example above, this planner would define 311,040,000 jobs.
-* `RowPlanner` creates one job per row.
-  In the example above, this planner would define stem:[5 \times 30 \times 1080 = 162,000] jobs.
-* `FramePlanner` creates one job per image.
-  In the example above, this planner would define stem:[5 \times 30 = 150] jobs.
-* `MonolithPlanner` creates a single job for the entire rendering process.
-  In the example above, this planner would define one job.
-
 === Scheduler
-
-A _scheduler_ is an object that receives an `IPlanner` and executes all jobs.
-We will implement multiple schedulers, each using a different approach.
-For example, the `SingleThreadScheduler` will run all jobs on a single thread, while `ThreadproolScheduler` will make use of a thread pool.
 
 Each scheduler implements the following interface:
 
