@@ -290,7 +290,7 @@ public interface IPlanner
 
 === Scheduler
 
-Each scheduler implements the following interface:
+A scheduler implements the following interface:
 
 [source,language='c#']
 ----
