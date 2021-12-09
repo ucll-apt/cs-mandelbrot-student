@@ -38,7 +38,7 @@ namespace Mandelbrot
             var height = mandelbrots[0].Height;
             var pixelCount = width * height;
             var mandelbrotIndex = index / pixelCount;
-            var pixelIndex = index / pixelCount;
+            var pixelIndex = index % pixelCount;
             var x = pixelIndex % width;
             var y = pixelIndex / width;
 
